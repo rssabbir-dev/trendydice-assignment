@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
 	EditOutlined,
 	DeleteOutlined,
@@ -9,19 +9,23 @@ import {
 	GlobalOutlined,
 } from '@ant-design/icons';
 import { Avatar, Card, Popconfirm, Space, Spin } from 'antd';
+import { useDispatch, useSelector } from 'react-redux';
+import { userActions } from '../store/userSlice';
 
 const { Meta } = Card;
-const UserCard = ({ user, action, loadingState,reactState }) => {
+const UserCard = ({ user, action, reactState }) => {
+	const dispatch = useDispatch()
+	const { isUserDeleteLoading } = useSelector((state) => state.users);
 	const { id, name, username, email, phone, website } = user;
-	const { handleUserDelete, handleUserEdit, handleUserReact } = action;
-	const { isUserDeleteLoading } = loadingState;
+	const { handleUserDelete } = action;
+	const [selectedId,setSelected] = useState(null)
 	return (
 		<Card
-			style={{ width: 300 }}
+			style={{ width: 300,margin:'15px' }}
 			size={'small'}
 			cover={
 				<img
-					style={{ backgroundColor: '#F5F5F5' }}
+					style={{ backgroundColor: '#F5F5F5',height:'200px' }}
 					alt='example'
 					src={`https://avatars.dicebear.com/v2/avataaars/${username}.svg?options[mood][]=happy`}
 				/>
@@ -30,31 +34,41 @@ const UserCard = ({ user, action, loadingState,reactState }) => {
 				<>
 					{!reactState && (
 						<HeartOutlined
-							onClick={() => handleUserReact(id)}
+							onClick={() =>
+								dispatch(
+									userActions.setStoreReactCollection(id)
+								)
+							}
 							key='heartOutline'
 							style={{ color: 'red', fontSize: '20px' }}
 						/>
 					)}
 					{reactState && (
 						<HeartFilled
-							onClick={() => handleUserReact(id)}
+							onClick={() =>
+								dispatch(
+									userActions.setStoreReactCollection(id)
+								)
+							}
 							key='heartOutline'
 							style={{ color: 'red', fontSize: '20px' }}
 						/>
 					)}
 				</>,
 				<EditOutlined
-					onClick={() => handleUserEdit(user)}
+					onClick={() => dispatch(userActions.handleUserEdit(user))}
 					key='edit'
 					style={{ fontSize: '20px' }}
 				/>,
 				<>
-					{!isUserDeleteLoading && (
-						<Popconfirm
+					{isUserDeleteLoading && user.id === selectedId ? <Spin /> : <Popconfirm
 							placement='topLeft'
 							title={`Are you sure to delete ${name}?`}
 							description={'Delete the user'}
-							onConfirm={() => handleUserDelete(user)}
+							onConfirm={() => {
+								handleUserDelete(user);
+								setSelected(id)
+							}}
 							okText='Yes'
 							cancelText='No'
 						>
@@ -62,9 +76,7 @@ const UserCard = ({ user, action, loadingState,reactState }) => {
 								key='delete'
 								style={{ fontSize: '20px' }}
 							/>
-						</Popconfirm>
-					)}
-					{isUserDeleteLoading && <Spin />}
+						</Popconfirm>}
 				</>,
 			]}
 		>

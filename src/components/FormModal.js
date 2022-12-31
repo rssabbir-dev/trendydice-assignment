@@ -1,6 +1,7 @@
 import { Button, Form, Input, Modal, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
-import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { userActions } from '../store/userSlice';
 
 const layout = {
 	labelCol: {
@@ -17,27 +18,36 @@ const tailLayout = {
 	},
 };
 
-
-const FormModal = ({
-	modalAction,
-	modalData,
-	handleUserEditFormSubmit,
-	confirmLoading,
-}) => {
-	const antIcon = <LoadingOutlined style={{ fontSize: 18, color:'white',marginRight:'5px' }} spin />;
-	const [open, setOpen] = modalAction;
+const FormModal = ({ handleUserEditFormSubmit }) => {
+    const [form] = Form.useForm();
+	const {
+		isUserUpdateLoading: confirmLoading,
+		modalData,
+		modalOpen: open,
+	} = useSelector((state) => state.users);
+	const dispatch = useDispatch();
+	const antIcon = (
+		<LoadingOutlined
+			style={{ fontSize: 18, color: 'white', marginRight: '5px' }}
+			spin
+		/>
+	);
 	const { id, name, username, email, phone, website } = modalData;
 
-    const [form] = Form.useForm();
-    
+	
 	const handleCancel = () => {
-        setOpen(false);
-        form.resetFields()
+		dispatch(userActions.setModalOpen(false));
+		form.resetFields();
 	};
 	const onFinish = (values) => {
 		handleUserEditFormSubmit(values, id);
-    };
-    
+	};
+	form.setFieldsValue({
+		name,
+		email,
+		phone,
+		website,
+	});
 	return (
 		<>
 			<Modal
@@ -61,7 +71,6 @@ const FormModal = ({
 								required: true,
 							},
 						]}
-						initialValue={name}
 					>
 						<Input />
 					</Form.Item>
@@ -73,7 +82,6 @@ const FormModal = ({
 								required: true,
 							},
 						]}
-						initialValue={email}
 					>
 						<Input />
 					</Form.Item>
@@ -85,7 +93,6 @@ const FormModal = ({
 								required: true,
 							},
 						]}
-						initialValue={phone}
 					>
 						<Input />
 					</Form.Item>
@@ -97,7 +104,6 @@ const FormModal = ({
 								required: true,
 							},
 						]}
-						initialValue={website}
 					>
 						<Input />
 					</Form.Item>
@@ -114,7 +120,9 @@ const FormModal = ({
 								<span>
 									<Spin indicator={antIcon} /> Saving
 								</span>
-							) : <span>Save</span>}
+							) : (
+								<span>Save</span>
+							)}
 						</Button>
 					</Form.Item>
 				</Form>

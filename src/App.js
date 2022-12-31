@@ -1,71 +1,76 @@
 import { Col, message, Row, Space } from 'antd';
 import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import './App.css';
 import FormModal from './components/FormModal';
 import SpinnerThreeDot from './components/SpinnerThreeDot/SpinnerThreeDot';
 import UserCard from './components/UserCard';
+import { userActions } from './store/userSlice';
 
 function App() {
-	const [users, setUsers] = useState([]);
-	const [open, setOpen] = useState(false);
-	const [isUsersLoading, setIsUsersLoading] = useState(true);
-	const [isUserDeleteLoading, setIsUserDeleteLoading] = useState(false);
-	const [isUserUpdateLoading, setIsUserUpdateLoading] = useState(false);
-	const [reactCollection, setReactCollection] = useState([]);
-	const [modalData,setModalData] = useState({})
+	const dispatch = useDispatch();
+	const { users, isUsersLoading, reactCollection } = useSelector(
+		(state) => state.users
+	);
 	const API_URL = 'https://jsonplaceholder.typicode.com';
 	useEffect(() => {
-		setIsUsersLoading(true);
+		dispatch(userActions.setUserLoading(true));
 		const fetchUserData = async () => {
 			try {
 				const res = await fetch(`${API_URL}/users`);
 				const data = await res.json();
-				setIsUsersLoading(false);
-				setUsers(data);
+				dispatch(userActions.setUserLoading(false));
+				dispatch(userActions.getUser(data));
 			} catch (err) {
 				console.log(err);
-				setIsUsersLoading(false);
+				dispatch(userActions.setUserLoading(false));
 			}
 		};
 		fetchUserData();
-	}, []);
-	const handleUserReact = (id) => {
-		if (reactCollection.includes(id)) {
-			const newCollection = reactCollection.filter(react => react !== id)
-			setReactCollection(newCollection)
-		} else {
-			const newCollection = [...reactCollection, id];
-			setReactCollection(newCollection);
-		}
-	};
-	const handleUserEdit = (user) => {
-		setModalData({})
-		setModalData(user)
-		setOpen(true)
-		console.log(user.name);
+	}, [dispatch]);
 
-	};
-	const handleUserEditFormSubmit = (user,id) => {
-		setIsUserUpdateLoading(true)
+	useEffect(() => {
+		const storedReact = JSON.parse(localStorage.getItem('react'));
+		if (storedReact) {
+			dispatch(userActions.loadReactCollection(storedReact))
+		}
+	},[dispatch])
+
+	//Update User Information
+
+	const handleUserEditFormSubmit = (user, id) => {
+		dispatch(userActions.setUserUpdateLoading(true));
 		fetch(`${API_URL}/users/${id}`, {
 			method: 'PUT',
 			headers: {
-				'content-type':'application/json'
+				'content-type': 'application/json',
 			},
-			body:JSON.stringify(user)
+			body: JSON.stringify(user),
 		})
-		.then(res => res.json())
+			.then((res) => res.json())
 			.then(() => {
-				setIsUserUpdateLoading(false)
-				setOpen(false)
-				user.id = id;
-				const existUsers = users.filter(person => person.id !== id);
-				const newUsers = [user,...existUsers]
-				setUsers(newUsers)
-		})
-	}
+				dispatch(userActions.setUserUpdateLoading(false));
+				dispatch(userActions.setModalOpen(false));
+
+				// const existUsers = users.filter((person) => person.id !== id);
+				// const newUsers = [user, ...existUsers];
+				// dispatch(userActions.getUser(newUsers));
+				const copyUser = JSON.parse(JSON.stringify(users));
+				const filteredUser = copyUser.map((person) => {
+					if (person.id === id) {
+						person.name = user.name;
+						person.email = user.email;
+						person.phone = user.phone;
+						person.website = user.website;
+					}
+					return person;
+				});
+				dispatch(userActions.getUser(filteredUser));
+			});
+	};
+	//Delete a user by id
 	const handleUserDelete = (targetUser) => {
-		setIsUserDeleteLoading(true);
+		dispatch(userActions.setUserDeleteLoading(true));
 		fetch(`${API_URL}/users/${targetUser.id}`, {
 			method: 'DELETE',
 		})
@@ -75,36 +80,26 @@ function App() {
 				const newUsers = users.filter(
 					(user) => user.id !== targetUser.id
 				);
-				setUsers(newUsers);
-				setIsUserDeleteLoading(false);
+				dispatch(userActions.getUser(newUsers));
+				dispatch(userActions.setUserDeleteLoading(false));
 			});
 	};
 	if (isUsersLoading) {
 		return <SpinnerThreeDot />;
 	}
 	return (
-		<div>
-			<FormModal
-				modalAction={[open, setOpen]}
-				modalData={modalData}
-				handleUserEditFormSubmit={handleUserEditFormSubmit}
-				confirmLoading={isUserUpdateLoading}
-			/>
-			<Row justify={'space-around'} gutter={[0, 30]}>
+		<Row>
+			<FormModal handleUserEditFormSubmit={handleUserEditFormSubmit} />
+			<Row justify={'center'}>
 				{users.map((user) => (
 					<Col
 						key={user.id}
 						className='gutter-row'
-						span={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+						span={{sm:24,md:12,lg:6}}
 					>
 						<UserCard
 							action={{
-								handleUserReact,
-								handleUserEdit,
 								handleUserDelete,
-							}}
-							loadingState={{
-								isUserDeleteLoading,
 							}}
 							reactState={reactCollection.includes(user.id)}
 							user={user}
@@ -112,7 +107,7 @@ function App() {
 					</Col>
 				))}
 			</Row>
-		</div>
+		</Row>
 	);
 }
 
